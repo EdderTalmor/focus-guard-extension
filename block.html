@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Focus Guard — Are you sure?</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      background: #0a0a0f;
+      color: #e8e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Animated background gradient */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at 30% 20%, rgba(255, 59, 48, 0.08) 0%, transparent 50%),
+                  radial-gradient(ellipse at 70% 80%, rgba(56, 132, 255, 0.06) 0%, transparent 50%);
+      z-index: 0;
+      animation: bgPulse 8s ease-in-out infinite alternate;
+    }
+
+    @keyframes bgPulse {
+      0% { opacity: 0.6; }
+      100% { opacity: 1; }
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      max-width: 480px;
+      padding: 40px 32px;
+      animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .shield {
+      font-size: 64px;
+      margin-bottom: 16px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #ff3b30, #ff9500);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+    }
+
+    .blocked-url {
+      font-size: 14px;
+      color: #787ca5;
+      margin-bottom: 24px;
+      word-break: break-all;
+    }
+
+    .blocked-url span {
+      color: #ff3b30;
+      font-weight: 600;
+    }
+
+    .message {
+      font-size: 16px;
+      line-height: 1.6;
+      color: #b0b0c8;
+      margin-bottom: 32px;
+    }
+
+    .message strong {
+      color: #e8e8f0;
+    }
+
+    /* Checkboxes */
+    .checks {
+      text-align: left;
+      margin-bottom: 32px;
+    }
+
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+    }
+
+    .check-item:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .check-item.checked {
+      background: rgba(52, 199, 89, 0.08);
+      border-color: rgba(52, 199, 89, 0.25);
+    }
+
+    .check-box {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.2s;
+      font-size: 13px;
+    }
+
+    .check-item.checked .check-box {
+      background: #34c759;
+      border-color: #34c759;
+      color: #fff;
+    }
+
+    .check-label {
+      font-size: 14px;
+      color: #c8c8d8;
+      line-height: 1.4;
+    }
+
+    .check-item.checked .check-label {
+      color: #e8e8f0;
+    }
+
+    /* Proceed button */
+    .proceed-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 32px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      color: #787ca5;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: not-allowed;
+      transition: all 0.3s;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .proceed-btn.enabled {
+      background: linear-gradient(135deg, #ff3b30, #ff9500);
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      opacity: 1;
+      pointer-events: auto;
+      box-shadow: 0 4px 20px rgba(255, 59, 48, 0.3);
+    }
+
+    .proceed-btn.enabled:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 28px rgba(255, 59, 48, 0.4);
+    }
+
+    .proceed-btn.enabled:active {
+      transform: translateY(0);
+    }
+
+    /* Go back link */
+    .go-back {
+      display: block;
+      margin-top: 16px;
+      font-size: 13px;
+      color: #787ca5;
+      text-decoration: none;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .go-back:hover {
+      color: #b0b0c8;
+    }
+
+    /* Timer countdown */
+    .timer {
+      font-size: 12px;
+      color: #787ca5;
+      margin-top: 12px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .timer.visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="shield">🛡️</div>
+    <h1>Whoa, whoa, whoa!</h1>
+    <div class="blocked-url">You're about to visit <span id="blocked-domain"></span></div>
+    <div class="message">
+      Take a breath. <strong>Are you sure this is important right now?</strong><br>
+      Check both boxes to confirm.
+    </div>
+
+    <div class="checks">
+      <div class="check-item" id="check1" onclick="toggleCheck(1)">
+        <div class="check-box" id="box1"></div>
+        <div class="check-label">I'm <strong>not</strong> going to waste my time</div>
+      </div>
+      <div class="check-item" id="check2" onclick="toggleCheck(2)">
+        <div class="check-box" id="box2"></div>
+        <div class="check-label">There's an <strong>important reason</strong> for this</div>
+      </div>
+    </div>
+
+    <button class="proceed-btn" id="proceed" onclick="proceed()">
+      Proceed to site →
+    </button>
+    <a class="go-back" onclick="goBack()">← Go back and stay focused</a>
+    <div class="timer" id="timer"></div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const originalUrl = params.get("url");
+    let check1 = false;
+    let check2 = false;
+
+    // Show blocked domain
+    try {
+      const hostname = new URL(originalUrl).hostname;
+      document.getElementById("blocked-domain").textContent = hostname;
+    } catch {
+      document.getElementById("blocked-domain").textContent = originalUrl;
+    }
+
+    function toggleCheck(n) {
+      if (n === 1) check1 = !check1;
+      if (n === 2) check2 = !check2;
+
+      document.getElementById("check" + n).classList.toggle("checked", n === 1 ? check1 : check2);
+      document.getElementById("box" + n).textContent = (n === 1 ? check1 : check2) ? "✓" : "";
+
+      const both = check1 && check2;
+      const btn = document.getElementById("proceed");
+      btn.classList.toggle("enabled", both);
+
+      // Show a small delay before enabling (prevents accidental clicks)
+      if (both) {
+        let count = 2;
+        const timer = document.getElementById("timer");
+        timer.classList.add("visible");
+        btn.style.pointerEvents = "none";
+        btn.style.opacity = "0.5";
+
+        const interval = setInterval(() => {
+          count--;
+          if (count <= 0) {
+            clearInterval(interval);
+            timer.classList.remove("visible");
+            btn.style.pointerEvents = "auto";
+            btn.style.opacity = "1";
+          } else {
+            timer.textContent = "Ready in " + count + "s...";
+          }
+        }, 1000);
+      }
+    }
+
+    function proceed() {
+      if (check1 && check2 && originalUrl) {
+        window.location.href = originalUrl;
+      }
+    }
+
+    function goBack() {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        // Fallback: go to a blank page or new tab
+        window.location.href = "about:blank";
+      }
+    }
+  </script>
+</body>
+</html>
