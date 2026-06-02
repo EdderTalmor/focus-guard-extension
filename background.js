@@ -51,6 +51,14 @@
     );
   }
 
+  // Check if URL has our bypass token (user confirmed via block page)
+  function hasBypassToken(url) {
+    try {
+      const u = new URL(url);
+      return u.searchParams.get("fg_confirmed") === "1";
+    } catch { return false; }
+  }
+
   // ── Intercept navigation ──
   // Use webNavigation.onBeforeNavigate for reliable interception
   chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
@@ -59,6 +67,19 @@
 
     // Skip our own block page and settings
     if (details.url.includes("block.html") || details.url.includes("popup.html")) return;
+
+    // If user confirmed via block page, allow through (strip token)
+    if (hasBypassToken(details.url)) {
+      try {
+        const u = new URL(details.url);
+        u.searchParams.delete("fg_confirmed");
+        const cleanUrl = u.toString();
+        if (cleanUrl !== details.url) {
+          chrome.tabs.update(details.tabId, { url: cleanUrl });
+        }
+      } catch {}
+      return;
+    }
 
     const blocked = await isBlocked(details.url);
     if (blocked) {

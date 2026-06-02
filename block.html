@@ -449,8 +449,14 @@
 
         if (seconds <= 0) {
           clearInterval(breatherInterval);
-          // Proceed to the site
-          window.location.href = originalUrl;
+          // Proceed to the site with bypass token
+          try {
+            const u = new URL(originalUrl);
+            u.searchParams.set("fg_confirmed", "1");
+            window.location.href = u.toString();
+          } catch {
+            window.location.href = originalUrl;
+          }
         }
       }, 1000);
     }
