@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Focus Guard",
-  "version": "1.0.0",
-  "description": "Block distracting websites with a mindful pause before you proceed.",
+  "version": "1.1.0",
+  "description": "Block distracting websites with a mindful pause and 15-second breathing exercise. One-tap Facebook block included.",
   "permissions": ["storage", "webNavigation", "tabs"],
   "browser_specific_settings": {
     "safari": {

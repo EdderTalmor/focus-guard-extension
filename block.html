@@ -205,22 +205,123 @@
       color: #b0b0c8;
     }
 
-    /* Timer countdown */
-    .timer {
-      font-size: 12px;
-      color: #787ca5;
-      margin-top: 12px;
-      opacity: 0;
-      transition: opacity 0.3s;
+    /* Breather section */
+    .breather {
+      display: none;
+      text-align: center;
+      padding: 40px 20px;
+      animation: fadeIn 0.5s ease;
     }
 
-    .timer.visible {
-      opacity: 1;
+    .breather.active {
+      display: block;
+    }
+
+    .breather-circle {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(52, 199, 89, 0.15) 0%, rgba(52, 199, 89, 0.05) 70%, transparent 100%);
+      border: 3px solid rgba(52, 199, 89, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 32px;
+      position: relative;
+      animation: breathe 4s ease-in-out infinite;
+    }
+
+    @keyframes breathe {
+      0%, 100% { 
+        transform: scale(1);
+        border-color: rgba(52, 199, 89, 0.3);
+        box-shadow: 0 0 0 0 rgba(52, 199, 89, 0);
+      }
+      50% { 
+        transform: scale(1.08);
+        border-color: rgba(52, 199, 89, 0.6);
+        box-shadow: 0 0 40px 10px rgba(52, 199, 89, 0.1);
+      }
+    }
+
+    .breather-timer {
+      font-size: 48px;
+      font-weight: 700;
+      color: #34c759;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .breather-text {
+      font-size: 20px;
+      font-weight: 600;
+      color: #e8e8f0;
+      margin-bottom: 8px;
+    }
+
+    .breather-sub {
+      font-size: 14px;
+      color: #787ca5;
+      margin-bottom: 32px;
+    }
+
+    .breather-progress {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .breather-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #34c759, #30d158);
+      border-radius: 2px;
+      transition: width 1s linear;
+      width: 0%;
+    }
+
+    .breather-instruction {
+      font-size: 16px;
+      color: #b0b0c8;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .breather-instruction strong {
+      color: #34c759;
+    }
+
+    /* Facebook quick-block badge */
+    .fb-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: rgba(255, 59, 48, 0.1);
+      border: 1px solid rgba(255, 59, 48, 0.2);
+      border-radius: 20px;
+      font-size: 12px;
+      color: #ff6b6b;
+      margin-top: 16px;
+    }
+
+    .fb-badge-dot {
+      width: 6px;
+      height: 6px;
+      background: #ff3b30;
+      border-radius: 50%;
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="container" id="main-container">
     <div class="shield">🛡️</div>
     <h1>Whoa, whoa, whoa!</h1>
     <div class="blocked-url">You're about to visit <span id="blocked-domain"></span></div>
@@ -229,7 +330,7 @@
       Check both boxes to confirm.
     </div>
 
-    <div class="checks">
+    <div class="checks" id="checks-section">
       <div class="check-item" id="check1" onclick="toggleCheck(1)">
         <div class="check-box" id="box1"></div>
         <div class="check-label">I'm <strong>not</strong> going to waste my time</div>
@@ -240,11 +341,30 @@
       </div>
     </div>
 
-    <button class="proceed-btn" id="proceed" onclick="proceed()">
+    <button class="proceed-btn" id="proceed" onclick="startBreather()">
       Proceed to site →
     </button>
     <a class="go-back" onclick="goBack()">← Go back and stay focused</a>
-    <div class="timer" id="timer"></div>
+    <div class="fb-badge" id="fb-badge">
+      <div class="fb-badge-dot"></div>
+      Already don't allow Facebook
+    </div>
+  </div>
+
+  <!-- Breather overlay -->
+  <div class="breather" id="breather">
+    <div class="breather-circle">
+      <div class="breather-timer" id="breather-timer">15</div>
+    </div>
+    <div class="breather-text">Take a deep breath</div>
+    <div class="breather-sub">Inhale slowly... hold... exhale</div>
+    <div class="breather-progress">
+      <div class="breather-progress-bar" id="breather-progress-bar"></div>
+    </div>
+    <div class="breather-instruction" id="breather-instruction">
+      <strong>Breathe in</strong> through your nose for 4 seconds
+    </div>
+    <div class="go-back" onclick="cancelBreather()">← Actually, go back</div>
   </div>
 
   <script>
@@ -252,13 +372,22 @@
     const originalUrl = params.get("url");
     let check1 = false;
     let check2 = false;
+    let breatherInterval = null;
 
     // Show blocked domain
     try {
       const hostname = new URL(originalUrl).hostname;
       document.getElementById("blocked-domain").textContent = hostname;
+      
+      // Show Facebook badge if blocking Facebook
+      if (hostname.includes("facebook.com") || hostname.includes("fb.com")) {
+        document.getElementById("fb-badge").style.display = "inline-flex";
+      } else {
+        document.getElementById("fb-badge").style.display = "none";
+      }
     } catch {
       document.getElementById("blocked-domain").textContent = originalUrl;
+      document.getElementById("fb-badge").style.display = "none";
     }
 
     function toggleCheck(n) {
@@ -271,40 +400,74 @@
       const both = check1 && check2;
       const btn = document.getElementById("proceed");
       btn.classList.toggle("enabled", both);
-
-      // Show a small delay before enabling (prevents accidental clicks)
-      if (both) {
-        let count = 2;
-        const timer = document.getElementById("timer");
-        timer.classList.add("visible");
-        btn.style.pointerEvents = "none";
-        btn.style.opacity = "0.5";
-
-        const interval = setInterval(() => {
-          count--;
-          if (count <= 0) {
-            clearInterval(interval);
-            timer.classList.remove("visible");
-            btn.style.pointerEvents = "auto";
-            btn.style.opacity = "1";
-          } else {
-            timer.textContent = "Ready in " + count + "s...";
-          }
-        }, 1000);
-      }
     }
 
-    function proceed() {
-      if (check1 && check2 && originalUrl) {
-        window.location.href = originalUrl;
+    function startBreather() {
+      if (!check1 || !check2 || !originalUrl) return;
+
+      // Hide main container, show breather
+      document.getElementById("main-container").style.display = "none";
+      document.getElementById("breather").classList.add("active");
+
+      let seconds = 15;
+      const timerEl = document.getElementById("breather-timer");
+      const progressBar = document.getElementById("breather-progress-bar");
+      const instructionEl = document.getElementById("breather-instruction");
+
+      // Breathing phases: 4s in, 4s hold, 4s out, 3s hold
+      const phases = [
+        { text: "<strong>Breathe in</strong> through your nose for 4 seconds", duration: 4 },
+        { text: "<strong>Hold</strong> your breath gently", duration: 4 },
+        { text: "<strong>Breathe out</strong> slowly through your mouth", duration: 4 },
+        { text: "<strong>Hold</strong> empty and relax", duration: 3 }
+      ];
+
+      let phaseIndex = 0;
+      let phaseTimer = 0;
+
+      function updateInstruction() {
+        instructionEl.innerHTML = phases[phaseIndex].text;
       }
+
+      updateInstruction();
+
+      breatherInterval = setInterval(() => {
+        seconds--;
+        timerEl.textContent = seconds;
+
+        // Update progress bar (15 seconds total)
+        const progress = ((15 - seconds) / 15) * 100;
+        progressBar.style.width = progress + "%";
+
+        // Track breathing phases
+        phaseTimer++;
+        if (phaseTimer >= phases[phaseIndex].duration) {
+          phaseTimer = 0;
+          phaseIndex = (phaseIndex + 1) % phases.length;
+          updateInstruction();
+        }
+
+        if (seconds <= 0) {
+          clearInterval(breatherInterval);
+          // Proceed to the site
+          window.location.href = originalUrl;
+        }
+      }, 1000);
+    }
+
+    function cancelBreather() {
+      if (breatherInterval) {
+        clearInterval(breatherInterval);
+        breatherInterval = null;
+      }
+      document.getElementById("breather").classList.remove("active");
+      document.getElementById("main-container").style.display = "block";
     }
 
     function goBack() {
       if (window.history.length > 1) {
         window.history.back();
       } else {
-        // Fallback: go to a blank page or new tab
         window.location.href = "about:blank";
       }
     }

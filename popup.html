@@ -64,6 +64,68 @@
       margin-top: 4px;
     }
 
+    /* Facebook quick-block banner */
+    .fb-banner {
+      padding: 12px 20px;
+      background: linear-gradient(135deg, rgba(255, 59, 48, 0.12), rgba(255, 59, 48, 0.06));
+      border-bottom: 1px solid rgba(255, 59, 48, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .fb-banner-text {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .fb-banner-icon {
+      font-size: 18px;
+    }
+
+    .fb-banner-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #ff6b6b;
+    }
+
+    .fb-banner-sub {
+      font-size: 10px;
+      color: #787ca5;
+      margin-top: 2px;
+    }
+
+    .fb-toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .fb-toggle.on {
+      background: rgba(255, 59, 48, 0.4);
+    }
+
+    .fb-toggle-knob {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: #787ca5;
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+
+    .fb-toggle.on .fb-toggle-knob {
+      left: 22px;
+      background: #ff3b30;
+    }
+
     /* Site list */
     .section {
       padding: 16px 20px;
@@ -79,7 +141,7 @@
     }
 
     .site-list {
-      max-height: 240px;
+      max-height: 200px;
       overflow-y: auto;
     }
 
@@ -249,6 +311,18 @@
       font-size: 32px;
       margin-bottom: 8px;
     }
+
+    /* Breather info */
+    .breather-info {
+      padding: 10px 20px;
+      background: rgba(52, 199, 89, 0.06);
+      border-top: 1px solid rgba(52, 199, 89, 0.1);
+      font-size: 11px;
+      color: #34c759;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
   </style>
 </head>
 <body>
@@ -263,22 +337,89 @@
     <div class="header-sub" id="site-count">Loading...</div>
   </div>
 
+  <div class="fb-banner">
+    <div class="fb-banner-text">
+      <span class="fb-banner-icon">🚫</span>
+      <div>
+        <div class="fb-banner-label">Already don't allow Facebook</div>
+        <div class="fb-banner-sub">One-tap block for all Facebook domains</div>
+      </div>
+    </div>
+    <div class="fb-toggle on" id="fb-toggle" onclick="toggleFacebook()">
+      <div class="fb-toggle-knob"></div>
+    </div>
+  </div>
+
   <div class="section">
     <div class="section-title">Blocked Sites</div>
     <div class="site-list" id="site-list"></div>
 
     <div class="add-row">
-      <input type="text" class="add-input" id="add-input" placeholder="e.g. facebook.com">
+      <input type="text" class="add-input" id="add-input" placeholder="e.g. tiktok.com">
       <button class="add-btn" id="add-btn">+ Block</button>
     </div>
 
     <div class="presets" id="presets"></div>
   </div>
 
+  <div class="breather-info">
+    🧘 15-second breathing pause after confirming access
+  </div>
+
   <div class="footer">
-    v1.0.0 · Made with 🛡️ by Edder
+    v1.1.0 · Made with 🛡️ by Edder
   </div>
 
   <script src="popup.js"></script>
+  <script>
+    // Facebook quick-block toggle
+    const FB_DOMAINS = ["facebook.com", "fb.com", "fbcdn.net", "instagram.com"];
+    
+    function toggleFacebook() {
+      const toggle = document.getElementById("fb-toggle");
+      const isOn = toggle.classList.contains("on");
+      
+      if (isOn) {
+        // Remove Facebook from blocked sites
+        chrome.storage.sync.get("blockedSites", (data) => {
+          let sites = data.blockedSites || [];
+          sites = sites.filter(s => !FB_DOMAINS.some(fb => s.includes(fb)));
+          chrome.storage.sync.set({ blockedSites: sites }, () => {
+            toggle.classList.remove("on");
+            renderSiteList();
+          });
+        });
+      } else {
+        // Add Facebook to blocked sites
+        chrome.storage.sync.get("blockedSites", (data) => {
+          let sites = data.blockedSites || [];
+          FB_DOMAINS.forEach(domain => {
+            if (!sites.includes(domain)) sites.push(domain);
+          });
+          chrome.storage.sync.set({ blockedSites: sites }, () => {
+            toggle.classList.add("on");
+            renderSiteList();
+          });
+        });
+      }
+    }
+
+    // Check Facebook status on load
+    function checkFacebookStatus() {
+      chrome.storage.sync.get("blockedSites", (data) => {
+        const sites = data.blockedSites || [];
+        const fbBlocked = FB_DOMAINS.every(fb => sites.some(s => s.includes(fb)));
+        const toggle = document.getElementById("fb-toggle");
+        if (fbBlocked) {
+          toggle.classList.add("on");
+        } else {
+          toggle.classList.remove("on");
+        }
+      });
+    }
+
+    // Initialize
+    checkFacebookStatus();
+  </script>
 </body>
 </html>
